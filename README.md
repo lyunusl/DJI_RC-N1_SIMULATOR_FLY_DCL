@@ -1,66 +1,145 @@
-DJI RC-N1
-===============
-Discussion thread: coming soon...
+# DJI RC-N1 Simulator Adapter
 
-Donate:
+Use a DJI RC-N1 remote controller as a virtual Xbox 360 gamepad on Windows.
 
-<img height="558" src="btc.jpg" width="400"/>
+This project is meant for people who want to fly PC simulators with the DJI RC-N1 controller and do not want to build or configure a full Python project by hand.
 
-<img height="450" src="monoQR.jpg" width="400"/>
+## What It Does
 
-- https://send.monobank.ua/jar/87uNmHPh5v
-- https://www.buymeacoffee.com/ivanyakymenko 
+- Finds the DJI USB VCOM "For Protocol" serial port automatically.
+- Enables RC simulator mode.
+- Reads stick and camera wheel input from the controller.
+- Sends the input to Windows as a virtual Xbox 360 controller through `vgamepad`.
+- Runs with high process priority on Windows to reduce input delay.
+- Keeps debug output off by default.
 
------------------------------------------------------------------------------
-Latest version V3.0.0 (26.09.2023)
- - critical fix, com port open error on some PC's
------------------------------------------------------------------------------
+## Requirements
 
- - Connect your DJI Remote Controller to your PC and use it to play simulators
- - Confirmed DJI Mavic 3 RC231
- - For Mavic Mini or a Python interface, take a look at [justin97530/miniDjiController](https://github.com/justin97530/miniDjiController)
- - For DJI Mini 2 or a Python interface, take a look at [usatenko/DjiMini2RCasJoystick](https://github.com/usatenko/DjiMini2RCasJoystick)
- - For DJI Phantom 3 take a look at [mishavoloshchuk/mDjiController](https://github.com/mishavoloshchuk/mDjiController)
------------------------------------------------------------------------------
+- Windows 10 or Windows 11.
+- Internet access for first-time setup if Python is not already installed.
+- DJI Assistant 2 for Consumer Drones installed, because it provides the required USB VCOM driver.
+- A DJI RC-N1 controller connected through the bottom USB-C port.
 
+Close DJI Assistant 2 before running this adapter. Only one app can usually use the controller serial port at a time.
 
-This is a program that connects to your DJI Mavic 3 Remote Controller (RC-N1) as a XBox360 gamepad,
-reads the stick positions and tells Windows that position.
+## Quick Start
 
-<img height="400" src="DJI-RC-N1-Remote-Controller.png" width="400"/>
+1. Download or clone this folder.
+2. Install DJI Assistant 2 for Consumer Drones if the controller serial ports do not appear.
+3. Connect the RC-N1 through the bottom USB-C port.
+4. Run `run.bat`.
+5. Open your simulator and select the Xbox 360 controller input.
 
------------------------------------------------------------------------------
-Installation / Usage
-- Install packages before usage:
-- dji-assistant-2-consumer-drones-series and close it after installation https://www.dji.com/downloads/softwares/dji-assistant-2-consumer-drones-series
-- python 3.9 or 3.x
-- pip3 install vgamepad
-- pip3 install pyserial
+`run.bat` handles the setup automatically:
 
-- Power on RC-N1
-- Connect via bottom type-C
-- run main.py
-- run yor simulator
+- If Python 3.9 or newer is already installed, it uses it.
+- If Python is missing, it downloads and installs Python 3.11.9 from python.org for the current Windows user.
+- It creates a local `.venv` folder.
+- It installs the required Python packages.
+- It starts the adapter with high process priority.
 
-![](connect_ok.png)
+Optional:
 
-for restart game or recover drone: use camera wheel, left scroll
+- Run `create_desktop_shortcut.bat` to create an icon shortcut on your desktop.
 
-![](control.png)
+## Expected Serial Ports
 
+When the controller is connected correctly, Windows should show ports similar to:
 
-TROUBLESHOOTING
------------------------------------------------------------------------------
-App searching by itself for the serial port with description "DJI USB VCOM For Protocol"
-make sure your device attached via bottom Type-C connector
-![](connect.png)
+```text
+DEVICE USB VCOM For Protocol (COM6)
+DEVICE USB VCOM For Debug (COM7)
+```
 
-[Tested with DCL - The game](https://store.steampowered.com/app/964570/DCL__The_Game/) 
+The adapter uses the `For Protocol` port.
 
-    Preset:
-    Mode 2
-    Acro
-    Zero throttle at stick center
+You can list ports manually:
 
-![](preset1.png)
-![](preset2.png)
+```bat
+.venv\Scripts\python.exe -m serial.tools.list_ports -v
+```
+
+## Manual Run
+
+The automatic run command is:
+
+```bat
+run.bat
+```
+
+If you need to force a specific port:
+
+```bat
+.venv\Scripts\python.exe main.py --port COM6
+```
+
+If you need diagnostic output:
+
+```bat
+.venv\Scripts\python.exe main.py --debug
+```
+
+## Troubleshooting
+
+### The app says it cannot open COM9
+
+The adapter did not find the DJI `For Protocol` port and fell back to the default port.
+
+Fix:
+
+1. Connect the controller through the bottom USB-C port.
+2. Install DJI Assistant 2 for Consumer Drones.
+3. Close DJI Assistant 2.
+4. Run `run.bat` again.
+
+### The controller appears as `For Debug` only
+
+Use the bottom USB-C connection on the controller. The adapter needs the `For Protocol` port.
+
+### The simulator does not see a controller
+
+Run the automatic setup again:
+
+```bat
+run.bat
+```
+
+Windows should see a virtual Xbox 360 controller.
+
+You can also run setup without starting the adapter:
+
+```bat
+install.bat
+```
+
+`install.bat` is only a compatibility wrapper for `run.bat --setup-only`.
+
+### Input feels delayed
+
+This version updates the virtual gamepad as soon as a valid controller packet is received. It also raises the Python process priority to `High` on Windows.
+
+If a simulator still feels delayed:
+
+- Close DJI Assistant 2.
+- Close other controller mapping tools.
+- Use a direct USB connection instead of a hub.
+- Try another USB port.
+
+## Notes
+
+This project does not include a signed Windows `.exe` installer. That is intentional. The goal is to avoid SmartScreen issues and keep the code easy to inspect.
+
+If Python is missing, `run.bat` downloads the official Python installer from python.org and installs it for the current user.
+
+## Tested With
+
+- DJI RC-N1 / RC231 style controller.
+- DCL - The Game.
+
+Recommended DCL preset:
+
+```text
+Mode 2
+Acro
+Zero throttle at stick center
+```

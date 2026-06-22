@@ -1,17 +1,38 @@
 import argparse
+import ctypes
+import os
 import struct
 import time
-from threading import Thread
 
 import serial.tools.list_ports
 import vgamepad as vg
 
-parser = argparse.ArgumentParser(description='DJI Mavic 3 RC231, RC-N1)')
-parser.add_argument('-p', '--port', help='RC Serial Port', default="COM9")
+parser = argparse.ArgumentParser(description='DJI RC-N1 Simulator Adapter')
+parser.add_argument('-p', '--port', help='fallback RC serial port', default="COM9")
+parser.add_argument('--debug', action='store_true', help='enable verbose console logging')
+parser.add_argument('--serial-timeout', type=float, default=0.02, help='serial read/write timeout in seconds')
 
 args = parser.parse_args()
 gamepad = vg.VX360Gamepad()
 camera = 0
+START_BYTE = b'\x55'
+EMPTY_PAYLOAD = bytearray()
+
+def log(*values):
+    if args.debug:
+        print(*values)
+
+def status(*values):
+    print(*values)
+
+def set_high_priority():
+    if os.name != 'nt':
+        return
+    high_priority_class = 0x00000080
+    handle = ctypes.windll.kernel32.GetCurrentProcess()
+    ctypes.windll.kernel32.SetPriorityClass(handle, high_priority_class)
+
+set_high_priority()
 
 events = (
     gamepad.left_trigger,
@@ -22,9 +43,7 @@ events = (
 gamepad.reset()
 time.sleep(1)
 
-def calc_checksum(packet, plength):
-
-    crc = [0x0000, 0x1189, 0x2312, 0x329b, 0x4624, 0x57ad, 0x6536, 0x74bf,
+def calc_checksum(packet, plength, crc=(0x0000, 0x1189, 0x2312, 0x329b, 0x4624, 0x57ad, 0x6536, 0x74bf,
     0x8c48, 0x9dc1, 0xaf5a, 0xbed3, 0xca6c, 0xdbe5, 0xe97e, 0xf8f7,
     0x1081, 0x0108, 0x3393, 0x221a, 0x56a5, 0x472c, 0x75b7, 0x643e,
     0x9cc9, 0x8d40, 0xbfdb, 0xae52, 0xdaed, 0xcb64, 0xf9ff, 0xe876,
@@ -55,7 +74,7 @@ def calc_checksum(packet, plength):
     0xe70e, 0xf687, 0xc41c, 0xd595, 0xa12a, 0xb0a3, 0x8238, 0x93b1,
     0x6b46, 0x7acf, 0x4854, 0x59dd, 0x2d62, 0x3ceb, 0x0e70, 0x1ff9,
     0xf78f, 0xe606, 0xd49d, 0xc514, 0xb1ab, 0xa022, 0x92b9, 0x8330,
-    0x7bc7, 0x6a4e, 0x58d5, 0x495c, 0x3de3, 0x2c6a, 0x1ef1, 0x0f78]
+    0x7bc7, 0x6a4e, 0x58d5, 0x495c, 0x3de3, 0x2c6a, 0x1ef1, 0x0f78)):
 
     # Seeds
     # v = 0x1012 #Naza M
@@ -68,8 +87,7 @@ def calc_checksum(packet, plength):
         v = vv ^ crc[((packet[i] ^ v) & 0xFF)]
     return v
 
-def calc_pkt55_hdr_checksum(seed, packet, plength):
-    arr_2A103 = [0x00,0x5E,0xBC,0xE2,0x61,0x3F,0xDD,0x83,0xC2,0x9C,0x7E,0x20,0xA3,0xFD,0x1F,0x41,
+def calc_pkt55_hdr_checksum(seed, packet, plength, arr_2A103=(0x00,0x5E,0xBC,0xE2,0x61,0x3F,0xDD,0x83,0xC2,0x9C,0x7E,0x20,0xA3,0xFD,0x1F,0x41,
         0x9D,0xC3,0x21,0x7F,0xFC,0xA2,0x40,0x1E,0x5F,0x01,0xE3,0xBD,0x3E,0x60,0x82,0xDC,
         0x23,0x7D,0x9F,0xC1,0x42,0x1C,0xFE,0xA0,0xE1,0xBF,0x5D,0x03,0x80,0xDE,0x3C,0x62,
         0xBE,0xE0,0x02,0x5C,0xDF,0x81,0x63,0x3D,0x7C,0x22,0xC0,0x9E,0x1D,0x43,0xA1,0xFF,
@@ -84,7 +102,7 @@ def calc_pkt55_hdr_checksum(seed, packet, plength):
         0xCA,0x94,0x76,0x28,0xAB,0xF5,0x17,0x49,0x08,0x56,0xB4,0xEA,0x69,0x37,0xD5,0x8B,
         0x57,0x09,0xEB,0xB5,0x36,0x68,0x8A,0xD4,0x95,0xCB,0x29,0x77,0xF4,0xAA,0x48,0x16,
         0xE9,0xB7,0x55,0x0B,0x88,0xD6,0x34,0x6A,0x2B,0x75,0x97,0xC9,0x4A,0x14,0xF6,0xA8,
-        0x74,0x2A,0xC8,0x96,0x15,0x4B,0xA9,0xF7,0xB6,0xE8,0x0A,0x54,0xD7,0x89,0x6B,0x35]
+        0x74,0x2A,0xC8,0x96,0x15,0x4B,0xA9,0xF7,0xB6,0xE8,0x0A,0x54,0xD7,0x89,0x6B,0x35)):
 
     chksum = seed
     for i in range(0, plength):
@@ -94,7 +112,7 @@ def calc_pkt55_hdr_checksum(seed, packet, plength):
 def send_duml(s, source, target, cmd_type, cmd_set, cmd_id, payload = None):
     global sequence_number
     sequence_number = 0x34eb
-    packet = bytearray.fromhex(u'55')
+    packet = bytearray(START_BYTE)
     length = 13
     if payload is not None:
         length = length + len(payload)
@@ -124,38 +142,38 @@ def send_duml(s, source, target, cmd_type, cmd_set, cmd_id, payload = None):
 
     sequence_number += 1
 
-print('app version: 3.0.0\n')
-# Open serial.
-try:
-
-    result = []
+def open_rc_serial():
+    selected_port = None
     ports = serial.tools.list_ports.comports(True)
 
     for port in ports:
-        try:
-            print(port.description)
-            if port.description.find("For Protocol") != -1:
-                print("found DJI USB VCOM For Protocol")
-                s = serial.Serial(port=port.name, baudrate=115200)
-                print('Opened serial port:', s.name)
-            else:
-                print("skip")
-            result.append(port)
-        except (OSError, serial.SerialException):
-            pass
+        log(port.description)
+        if port.description.find("For Protocol") != -1:
+            selected_port = port.name
+            log("found DJI USB VCOM For Protocol")
+            break
+        log("skip")
 
+    if selected_port is None:
+        selected_port = args.port
+        log('Using fallback serial port:', selected_port)
+
+    rc_serial = serial.Serial(port=selected_port, baudrate=115200, timeout=args.serial_timeout, write_timeout=args.serial_timeout)
+    rc_serial.reset_input_buffer()
+    rc_serial.reset_output_buffer()
+    status('Opened serial port:', rc_serial.name)
+    return rc_serial
+
+status('DJI RC-N1 Simulator Adapter')
+# Open serial.
+try:
+    s = open_rc_serial()
 except serial.SerialException as e:
     print('Could not open serial port:', e)
     exit(1)
 
-# Stylistic: Newline for spacing.
-print('\nDji RC231 emulation started...\n')
-print('\nClose terminal to stop\n')
-
-print('*******************************************************\n')
-print('* Telegram: https://t.me/DJI_RC_N1_SIMULATOR_FLY_DC   *\n')
-print('* Donate: https://www.buymeacoffee.com/ivanyakymenko  *\n')
-print('*******************************************************\n')
+status('Adapter is running.')
+status('Close this window to stop.')
 
 # Process input (min 364, center 1024, max 1684) -> (min 0, center 16384, max 32768)
 def parseInput(input, name):
@@ -169,24 +187,17 @@ def parseInput(input, name):
 
 st = {"rh": 0, "rv": 0, "lh": 0, "lv": 0}
 
-def threaded_function():
-    while(True):
-        time.sleep(0.1)
-        #print("working ...")
-        gamepad.left_joystick(int(st["lh"]), int(st["lv"]))
-        gamepad.right_joystick(int(st["rh"]), int(st["rv"]))
-        if camera > 32000:
-            gamepad.press_button(vg.XUSB_BUTTON.XUSB_GAMEPAD_Y) #restart race
-        if camera < -32000:
-            gamepad.press_button(vg.XUSB_BUTTON.XUSB_GAMEPAD_B) #recover drone
-        if camera == 0:
-            gamepad.release_button(vg.XUSB_BUTTON.XUSB_GAMEPAD_Y)
-            gamepad.release_button(vg.XUSB_BUTTON.XUSB_GAMEPAD_B)
-        gamepad.update()
-
-thread = Thread(target = threaded_function, args = ())
-thread.start()
-#thread.join()
+def update_gamepad():
+    gamepad.left_joystick(int(st["lh"]), int(st["lv"]))
+    gamepad.right_joystick(int(st["rh"]), int(st["rv"]))
+    if camera > 32000:
+        gamepad.press_button(vg.XUSB_BUTTON.XUSB_GAMEPAD_Y) #restart race
+    if camera < -32000:
+        gamepad.press_button(vg.XUSB_BUTTON.XUSB_GAMEPAD_B) #recover drone
+    if camera == 0:
+        gamepad.release_button(vg.XUSB_BUTTON.XUSB_GAMEPAD_Y)
+        gamepad.release_button(vg.XUSB_BUTTON.XUSB_GAMEPAD_B)
+    gamepad.update()
 
 try:
     # enable simulator mode for RC (without this stick positions are sent very slow by RC)
@@ -196,16 +207,16 @@ try:
 
         #time.sleep(0.1)
         # read channel values
-        send_duml(s, 0x0a, 0x06, 0x40, 0x06, 0x01, bytearray.fromhex(''))
+        send_duml(s, 0x0a, 0x06, 0x40, 0x06, 0x01, EMPTY_PAYLOAD)
         #s.write(bytearray.fromhex('55 0d 04 33 0a 06 eb 34 40 06 01 74 24'))
         # Don't write to a new line every time.
 #        print('\rPinged. ', end='')
 
         # read duml
-        buffer = bytearray.fromhex('')
+        buffer = bytearray()
         while True:
             b = s.read(1)
-            if b == bytearray.fromhex('55'):
+            if b == START_BYTE:
                 buffer.extend(b)
                 ph = s.read(2)
                 buffer.extend(ph)
@@ -234,6 +245,7 @@ try:
             st["lh"] = parseInput(data[22:24], 'rh')
 
             camera = parseInput(data[25:27], 'cam')
+            update_gamepad()
 
             #print(data)
             #with uinput.Device(events) as device:
@@ -252,4 +264,4 @@ except KeyboardInterrupt:
 
     pass
 
-print('Stopping.')
+status('Stopping.')
