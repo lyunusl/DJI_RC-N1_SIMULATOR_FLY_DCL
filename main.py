@@ -1,3 +1,6 @@
+# Based on DJI_RC-N1_SIMULATOR_FLY_DCL by IvanYaky.
+# Modified by lyunusl for Windows setup automation, packaging, and lower-latency updates.
+
 import argparse
 import ctypes
 import os

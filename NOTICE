@@ -1,0 +1,9 @@
+DJI RC-N1 Simulator Adapter
+
+This project is based on DJI_RC-N1_SIMULATOR_FLY_DCL by IvanYaky:
+https://github.com/IvanYaky/DJI_RC-N1_SIMULATOR_FLY_DCL
+
+Modifications include Windows setup automation, virtual environment bootstrapping,
+desktop shortcut support, lower-latency gamepad updates, and simulator-focused packaging.
+
+This project is distributed under the Apache License 2.0.

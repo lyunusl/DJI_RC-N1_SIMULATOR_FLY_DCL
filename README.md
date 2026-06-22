@@ -131,6 +131,16 @@ This project does not include a signed Windows `.exe` installer. That is intenti
 
 If Python is missing, `run.bat` downloads the official Python installer from python.org and installs it for the current user.
 
+## Acknowledgements
+
+This project is based on the original DJI RC-N1 simulator work by IvanYaky:
+
+https://github.com/IvanYaky/DJI_RC-N1_SIMULATOR_FLY_DCL
+
+This fork adds a simplified Windows setup flow, automatic dependency setup, desktop shortcut support, lower-latency gamepad updates, and simulator-focused packaging.
+
+The project remains distributed under the Apache License 2.0.
+
 ## Tested With
 
 - DJI RC-N1 / RC231 style controller.
