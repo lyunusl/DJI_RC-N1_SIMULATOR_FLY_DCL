@@ -1,5 +1,6 @@
 .venv/
 .tools/
+.idea/
 __pycache__/
 *.pyc
 run*.log
