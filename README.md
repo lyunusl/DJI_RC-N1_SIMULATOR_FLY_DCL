@@ -4,6 +4,8 @@ Use a DJI RC-N1 remote controller as a virtual Xbox 360 gamepad on Windows.
 
 This project is meant for people who want to fly PC simulators with the DJI RC-N1 controller and do not want to build or configure a full Python project by hand.
 
+This repository is an improved and packaged version of [IvanYaky](https://github.com/IvanYaky)'s original DJI RC-N1 simulator project. The original repository belongs to IvanYaky and is credited below.
+
 ## What It Does
 
 - Finds the DJI USB VCOM "For Protocol" serial port automatically.
@@ -133,11 +135,11 @@ If Python is missing, `run.bat` downloads the official Python installer from pyt
 
 ## Acknowledgements
 
-This project is based on the original DJI RC-N1 simulator work by IvanYaky:
+The original DJI RC-N1 simulator repository belongs to [IvanYaky](https://github.com/IvanYaky):
 
 https://github.com/IvanYaky/DJI_RC-N1_SIMULATOR_FLY_DCL
 
-This fork adds a simplified Windows setup flow, automatic dependency setup, desktop shortcut support, lower-latency gamepad updates, and simulator-focused packaging.
+This repository is an improved version of that work. It adds a simplified Windows setup flow, automatic Python and dependency setup, desktop shortcut support, lower-latency gamepad updates, and simulator-focused packaging.
 
 The project remains distributed under the Apache License 2.0.
 
